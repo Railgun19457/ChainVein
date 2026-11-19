@@ -1,0 +1,36 @@
+# 只有列出的方块可加入个人列表。每次连锁只匹配起点的方块种类。
+allowed-blocks:
+  - coal_ore
+  - deepslate_coal_ore
+  - copper_ore
+  - deepslate_copper_ore
+  - iron_ore
+  - deepslate_iron_ore
+  - gold_ore
+  - deepslate_gold_ore
+  - redstone_ore
+  - deepslate_redstone_ore
+  - lapis_ore
+  - deepslate_lapis_ore
+  - diamond_ore
+  - deepslate_diamond_ore
+  - emerald_ore
+  - deepslate_emerald_ore
+  - nether_gold_ore
+  - nether_quartz_ore
+  - oak_log
+  - spruce_log
+  - birch_log
+  - jungle_log
+  - acacia_log
+  - dark_oak_log
+  - mangrove_log
+  - cherry_log
+  - pale_oak_log
+  - crimson_stem
+  - warped_stem
+
+# 总数包含玩家手动挖掘的起点方块。
+max-blocks: 64
+# 从起点计算的最大直线距离（方块）。
+max-radius: 16

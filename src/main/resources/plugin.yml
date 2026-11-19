@@ -1,0 +1,14 @@
+name: ChainVein
+version: '${version}'
+main: dev.chainvein.ChainVeinPlugin
+api-version: '1.21.11'
+softdepend: [Easyland, PlaceholderAPI]
+commands:
+  chain:
+    description: 管理个人连锁采集设置
+    usage: /chain settings
+    permission: chainvein.use
+permissions:
+  chainvein.use:
+    description: 使用连锁采集及个人设置
+    default: true
