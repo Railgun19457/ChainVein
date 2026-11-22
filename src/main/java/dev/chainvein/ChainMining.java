@@ -1,7 +1,10 @@
 package dev.chainvein;
 
 import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
@@ -11,11 +14,13 @@ import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDropItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -26,40 +31,52 @@ final class ChainMining implements Listener {
 
     private final ChainVeinPlugin plugin;
     private final MiningBoundary boundary;
-    private final int maxBlocks;
-    private final long radiusSquared;
-    private final boolean crossBlockTypes;
-    private final Set<UUID> active = new HashSet<>();
+    private final Map<UUID, MiningJob> active = new HashMap<>();
 
-    ChainMining(ChainVeinPlugin plugin, MiningBoundary boundary, int maxBlocks, int maxRadius,
-            boolean crossBlockTypes) {
+    ChainMining(ChainVeinPlugin plugin, MiningBoundary boundary) {
         this.plugin = plugin;
         this.boundary = boundary;
-        this.maxBlocks = maxBlocks;
-        this.radiusSquared = (long) maxRadius * maxRadius;
-        this.crossBlockTypes = crossBlockTypes;
+    }
+
+    record Options(Set<Material> allowedBlocks, int maxBlocks, long radiusSquared, boolean crossBlockTypes,
+            boolean mergeDrops) {
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        Material material = event.getBlock().getType();
-        if (maxBlocks <= 1 || radiusSquared == 0 || active.contains(player.getUniqueId())
+        Block block = event.getBlock();
+        Material material = block.getType();
+        Options options = plugin.miningOptions();
+        if (options.maxBlocks() <= 1 || options.radiusSquared() == 0 || active.containsKey(player.getUniqueId())
                 || player.getGameMode() != GameMode.SURVIVAL || !player.hasPermission(ChainVeinPlugin.USE_PERMISSION)
-                || !plugin.allowedBlocks().contains(material)) {
+                || !options.allowedBlocks().contains(material)) {
             return;
         }
 
         PlayerSettings settings = plugin.readSettings(player.getUniqueId());
         if (settings == null || !settings.enabled() || !settings.blocks().contains(material)
-                || (settings.requireSneak() && !player.isSneaking())) {
+                || (settings.requireSneak() && !player.isSneaking())
+                || !canHarvest(block, player.getInventory().getItemInMainHand())) {
             return;
         }
 
         // Wait for the initiating vanilla break before attempting neighboring blocks.
-        MiningJob job = new MiningJob(event, material);
-        active.add(player.getUniqueId());
+        MiningJob job = new MiningJob(event, material, options);
+        active.put(player.getUniqueId(), job);
         job.runTaskTimer(plugin, 1L, 1L);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDrops(BlockDropItemEvent event) {
+        MiningJob job = active.get(event.getPlayer().getUniqueId());
+        if (job != null && job.options.mergeDrops() && event.getBlock().equals(job.dropSource)) {
+            job.drops.addAll(event.getItems());
+        }
+    }
+
+    private static boolean canHarvest(Block block, ItemStack tool) {
+        return !block.getBlockData().requiresCorrectToolForDrops() || block.isPreferredTool(tool);
     }
 
     private static ItemStack toolSignature(Player player) {
@@ -77,21 +94,26 @@ final class ChainMining implements Listener {
         private final World world;
         private final Position origin;
         private final Material material;
+        private final Options options;
         private final ItemStack tool;
         private final int slot;
         private final Queue<Position> pending = new ArrayDeque<>();
         private final Set<Position> visited = new HashSet<>();
+        private final Set<Item> drops = new LinkedHashSet<>();
 
         private Predicate<Block> withinBoundary;
+        private Block dropSource;
         private int broken = 1;
 
-        MiningJob(BlockBreakEvent initialEvent, Material material) {
+        MiningJob(BlockBreakEvent initialEvent, Material material, Options options) {
             this.initialEvent = initialEvent;
             player = initialEvent.getPlayer();
             Block block = initialEvent.getBlock();
             world = block.getWorld();
             origin = new Position(block.getX(), block.getY(), block.getZ());
             this.material = material;
+            this.options = options;
+            dropSource = block;
             tool = toolSignature(player);
             slot = player.getInventory().getHeldItemSlot();
         }
@@ -106,7 +128,7 @@ final class ChainMining implements Listener {
 
                 int checks = 0;
                 int breaks = 0;
-                while (!pending.isEmpty() && broken < maxBlocks && checks < CHECKS_PER_TICK
+                while (!pending.isEmpty() && broken < options.maxBlocks() && checks < CHECKS_PER_TICK
                         && breaks < BREAKS_PER_TICK) {
                     Position next = pending.remove();
                     checks++;
@@ -116,7 +138,7 @@ final class ChainMining implements Listener {
 
                     Block block = world.getBlockAt(next.x(), next.y(), next.z());
                     Material target = block.getType();
-                    if (target != material && (!crossBlockTypes || !plugin.allowedBlocks().contains(target))) {
+                    if (target != material && (!options.crossBlockTypes() || !options.allowedBlocks().contains(target))) {
                         continue;
                     }
                     PlayerSettings settings = activeSettings();
@@ -124,19 +146,21 @@ final class ChainMining implements Listener {
                         finish();
                         return;
                     }
-                    if (!settings.blocks().contains(target) || !withinBoundary.test(block)) {
+                    if (!settings.blocks().contains(target)
+                            || !canHarvest(block, player.getInventory().getItemInMainHand())
+                            || !withinBoundary.test(block)) {
                         continue;
                     }
-                    if (player.breakBlock(block)) {
+                    if (breakBlock(block)) {
                         broken++;
                         breaks++;
-                        if (broken < maxBlocks) {
+                        if (broken < options.maxBlocks()) {
                             addNeighbors(next);
                         }
                     }
                 }
 
-                if (pending.isEmpty() || broken == maxBlocks) {
+                if (pending.isEmpty() || broken == options.maxBlocks()) {
                     finish();
                 }
             } catch (RuntimeException exception) {
@@ -145,7 +169,17 @@ final class ChainMining implements Listener {
             }
         }
 
+        private boolean breakBlock(Block block) {
+            dropSource = block;
+            try {
+                return player.breakBlock(block);
+            } finally {
+                dropSource = null;
+            }
+        }
+
         private boolean begin() {
+            dropSource = null;
             if (initialEvent.isCancelled() || !loaded(origin) || initialEvent.getBlock().getType() == material) {
                 return false;
             }
@@ -157,7 +191,7 @@ final class ChainMining implements Listener {
         }
 
         private PlayerSettings activeSettings() {
-            if (!player.isOnline() || player.isDead() || !player.getWorld().equals(world)
+            if (options != plugin.miningOptions() || !player.isOnline() || player.isDead() || !player.getWorld().equals(world)
                     || player.getGameMode() != GameMode.SURVIVAL || !player.hasPermission(ChainVeinPlugin.USE_PERMISSION)
                     || player.getInventory().getHeldItemSlot() != slot || !tool.equals(toolSignature(player))) {
                 return null;
@@ -187,7 +221,7 @@ final class ChainMining implements Listener {
             long dx = (long) x - origin.x();
             long dy = (long) y - origin.y();
             long dz = (long) z - origin.z();
-            if (dx * dx + dy * dy + dz * dz <= radiusSquared) {
+            if (dx * dx + dy * dy + dz * dz <= options.radiusSquared()) {
                 Position position = new Position(x, y, z);
                 if (visited.add(position)) {
                     pending.add(position);
@@ -196,8 +230,12 @@ final class ChainMining implements Listener {
         }
 
         private void finish() {
-            cancel();
-            active.remove(player.getUniqueId());
+            if (active.remove(player.getUniqueId(), this)) {
+                cancel();
+                if (broken > 1 && options.mergeDrops()) {
+                    ChainDrops.merge(drops);
+                }
+            }
         }
     }
 

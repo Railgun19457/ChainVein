@@ -7,8 +7,10 @@ commands:
   chain:
     description: 管理个人连锁采集设置
     usage: /chain settings
-    permission: chainvein.use
 permissions:
   chainvein.use:
     description: 使用连锁采集及个人设置
     default: true
+  chainvein.reload:
+    description: 重新加载 ChainVein 配置
+    default: op

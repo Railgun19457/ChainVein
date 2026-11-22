@@ -1,50 +1,45 @@
 # ChainVein
-# 修改后重启服务端。玩家主动保存的个人设置存放在 players 目录。
+# 修改后使用 /chain reload，也可以重启服务端。个人设置存放在 players 目录。
+
 # 只有白名单内的方块可参与连锁或加入个人列表。
+# logs 和 ores 分别展开为原木类与矿石类，其他条目为单个方块。
 allowed-blocks:
-  - coal_ore
-  - deepslate_coal_ore
-  - copper_ore
-  - deepslate_copper_ore
-  - iron_ore
-  - deepslate_iron_ore
-  - gold_ore
-  - deepslate_gold_ore
-  - redstone_ore
-  - deepslate_redstone_ore
-  - lapis_ore
-  - deepslate_lapis_ore
-  - diamond_ore
-  - deepslate_diamond_ore
-  - emerald_ore
-  - deepslate_emerald_ore
-  - nether_gold_ore
-  - nether_quartz_ore
-  - oak_log
-  - spruce_log
-  - birch_log
-  - jungle_log
-  - acacia_log
-  - dark_oak_log
-  - mangrove_log
-  - cherry_log
-  - pale_oak_log
-  - crimson_stem
-  - warped_stem
+  - logs
+  - ores
+  - stone
+  - cobblestone
+  - deepslate
+  - cobbled_deepslate
+  - granite
+  - diorite
+  - andesite
+  - tuff
+  - calcite
+  - sand
+  - red_sand
+  - gravel
+  - clay
+  - dirt
+  - netherrack
+  - blackstone
+  - basalt
+  - end_stone
 
 # 总数包含玩家手动挖掘的起点方块。设为 1 可关闭额外采集。
 max-blocks: 64
 # 从起点计算的最大直线距离（方块）。设为 0 可关闭额外采集。
 max-radius: 16
 
-# 开启后，可连锁面相邻且同时在全服白名单和玩家个人列表中的不同种类方块。
-cross-block-types: false
+# 开启后，可连锁同时在全服白名单和玩家个人列表中的不同种类方块。
+cross-block-types: true
+
+# 将同一次连锁中可堆叠的掉落物合并，遵守物品的堆叠上限。
+merge-drops: true
 
 # 供尚未保存个人设置的玩家使用。
 player-defaults:
-  enabled: false
+  enabled: true
   require-sneak: true
-  sneak-swap: false
-  # 初始方块列表中的方块也必须在 allowed-blocks 中。
-  # 示例写法为 [iron_ore, oak_log]。
-  blocks: []
+  sneak-swap: true
+  # 支持种类名和方块 ID。实际生效的条目仍须在白名单内。
+  blocks: [logs, ores]

@@ -5,7 +5,7 @@ import java.util.Set;
 import org.bukkit.Material;
 
 record PlayerSettings(boolean enabled, boolean requireSneak, boolean sneakSwap, Set<Material> blocks) {
-    static final PlayerSettings DEFAULT = new PlayerSettings(false, true, false, Set.of());
+    static final PlayerSettings DEFAULT = new PlayerSettings(true, true, true, Set.of());
 
     PlayerSettings {
         blocks = Set.copyOf(blocks);

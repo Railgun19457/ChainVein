@@ -4,9 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -30,10 +28,8 @@ final class ConfigMigration {
         }
 
         if (syncKeys(config, template)) {
-            Path backup = path.resolveSibling("config.yml.bak");
-            Files.copy(path, backup, StandardCopyOption.REPLACE_EXISTING);
             YamlFiles.writeAtomically(path, config);
-            plugin.getLogger().info("Updated config.yml keys. Previous configuration saved to config.yml.bak.");
+            plugin.getLogger().info("Updated config.yml keys.");
         }
         return config;
     }
