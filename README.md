@@ -4,11 +4,11 @@
 
 ![ChainVein](https://count.getloli.com/@railgun19457_ChainVein?name=railgun19457_ChainVein&theme=minecraft&padding=6&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
-ChainVein 是一个面向 Paper 的连锁采集插件。在生存模式下挖掉一块矿石或原木，即可连锁采集与它面相邻的同种方块。每名玩家可以自己选择方块和触发方式，使用原版 Java 客户端即可。
+ChainVein 是一个面向 Paper 的连锁采集插件。在生存模式下挖掉一块矿石或原木，即可连锁采集面相邻的方块。管理员可以选择只采集同种方块或跨种类采集。每名玩家可以自己选择方块和触发方式，使用原版 Java 客户端即可。
 
 ## 功能特性
 
-- 自定义个人方块列表，支持命令 Tab 补全和右键点选
+- 自定义个人方块列表，支持 Tab 补全、按种类批量添加和右键点选
 - 支持命令开关、潜行采集和潜行时交换主副手来切换连锁
 - 通过 MiniMessage 聊天按钮修改个人快捷设置，状态按玩家保存
 - 保留原版掉落、经验、耐久、时运和精准采集
@@ -38,7 +38,15 @@ ChainVein 是一个面向 Paper 的连锁采集插件。在生存模式下挖掉
 /chain on
 ```
 
-用 `/chain settings` 点击修改开关。关闭潜行要求和副手快捷切换后，可以完全通过指令或菜单控制连锁。
+用 `/chain settings` 查看当前触发条件，点击开关后菜单会重新显示最新状态。菜单也提供原木、矿石和点选模式快捷按钮。
+
+| 玩家设置 | 作用 |
+| --- | --- |
+| `enabled` | 连锁总开关。开启时才可能连锁 |
+| `require-sneak` | 开启时，挖掉起点方块的那一刻必须在潜行 |
+| `sneak-swap` | 开启时，潜行中按交换主副手键（默认 F）会切换总开关 |
+
+设为 `enabled: true`、`require-sneak: false`、`sneak-swap: true` 时，站着挖掘已选方块即可连锁。潜行时按 F 会关闭连锁，再按一次会开启；站着按 F 仍会交换主副手。首块和后续方块还需符合白名单、个人列表及领地规则。
 
 ## 命令
 
@@ -48,9 +56,11 @@ ChainVein 是一个面向 Paper 的连锁采集插件。在生存模式下挖掉
 | `/chain on`、`/chain off`、`/chain toggle` | 开启、关闭或切换个人连锁总开关 |
 | `/chain trigger sneak <on\|off>` | 设置连锁是否要求潜行 |
 | `/chain trigger sneak-swap <on\|off>` | 设置潜行时按交换主副手键能否切换总开关 |
-| `/chain add <方块>` | 添加方块。Tab 补全白名单内尚未选中的方块 |
-| `/chain remove <方块>` | 移除方块。Tab 补全个人列表中已选中的方块 |
+| `/chain add <方块\|logs\|ores>` | 添加方块。Tab 补全白名单内尚未选中的方块 |
+| `/chain remove <方块\|logs\|ores>` | 移除方块。Tab 补全个人列表中已选中的方块 |
 | `/chain edit` | 进入或退出右键点选模式。点击方块切换该种类的启用状态 |
+
+`logs` 匹配原版原木标签中的方块。`ores` 匹配矿石及远古残骸。批量添加只处理当次白名单内的种类，保存为单个方块条目。批量移除则会移除个人列表中属于该种类的全部方块。
 
 ## 权限
 
@@ -65,8 +75,15 @@ ChainVein 是一个面向 Paper 的连锁采集插件。在生存模式下挖掉
 | `allowed-blocks` | 常见矿石、原木和菌柄 | 管理员允许连锁的方块种类 |
 | `max-blocks` | `64` | 单次连锁最多采集的方块数，包含起点 |
 | `max-radius` | `16` | 连锁范围，以起点为中心计算直线距离 |
+| `cross-block-types` | `false` | 开启后，同一次连锁可以经过不同种类的面相邻方块，每块仍须同时在白名单和个人列表中 |
+| `player-defaults.enabled` | `false` | 个人总开关的初始值 |
+| `player-defaults.require-sneak` | `true` | 默认要求潜行挖掘 |
+| `player-defaults.sneak-swap` | `false` | 潜行加副手切换的初始开关 |
+| `player-defaults.blocks` | `[]` | 初始个人方块列表，限于 `allowed-blocks` 内的方块 |
 
-修改配置后重启服务端。采集搜索仅访问已加载的区块。
+修改配置后重启服务端。新默认值适用于尚未保存过个人设置的玩家。采集搜索仅访问已加载的区块。
+
+启动时会按新版配置模板递归补齐缺失的键并移除过时的键，保留有效配置项的现有值。有键发生变化时，迁移前的文件会备份为 `config.yml.bak`。
 
 ## 插件联动
 

@@ -4,11 +4,11 @@
 
 ![ChainVein](https://count.getloli.com/@railgun19457_ChainVein?name=railgun19457_ChainVein&theme=minecraft&padding=6&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
-ChainVein is a Paper plugin for vein mining and tree felling. Break a block in Survival to mine blocks of the same type connected by their faces. Players can choose their own block list and controls using the vanilla Java client.
+ChainVein is a Paper plugin for vein mining and tree felling. Break a block in Survival to mine face-adjacent blocks. Administrators can allow different block types in the same chain. Players can choose their own block list and controls using the vanilla Java client.
 
 ## Features
 
-- Edit a personal block list with tab completion or by right-clicking blocks in the world
+- Edit a personal block list with tab completion, bulk block groups, or by right-clicking blocks in the world
 - Switch chain mining on or off by command or by swapping hands while sneaking
 - Change personal controls through clickable MiniMessage chat buttons
 - Preserve vanilla drops, experience, durability, Fortune, and Silk Touch
@@ -38,7 +38,15 @@ New players start with chain mining and the sneak-swap shortcut disabled, sneaki
 /chain on
 ```
 
-Run `/chain settings` to change your controls through chat buttons. With both sneak options off, you can control chain mining entirely through commands or a menu.
+Run `/chain settings` to view the current activation conditions. Clicking a switch refreshes the menu. It also provides shortcuts for logs, ores, and selection mode.
+
+| Player setting | Effect |
+| --- | --- |
+| `enabled` | Master switch. It must be on for a chain to start |
+| `require-sneak` | Requires sneaking when you finish breaking the first block |
+| `sneak-swap` | Lets you toggle the master switch by swapping hands while sneaking (F by default) |
+
+With `enabled: true`, `require-sneak: false`, and `sneak-swap: true`, you can start a chain while standing. Pressing F while sneaking toggles the master switch. Standing and pressing F swaps hands as usual. The block allowlist, your selection, and claim protections still apply.
 
 ## Commands
 
@@ -48,9 +56,11 @@ Run `/chain settings` to change your controls through chat buttons. With both sn
 | `/chain on`, `/chain off`, `/chain toggle` | Set or toggle the personal master switch |
 | `/chain trigger sneak <on\|off>` | Set whether mining a chain requires sneaking |
 | `/chain trigger sneak-swap <on\|off>` | Set whether swapping hands while sneaking toggles the master switch |
-| `/chain add <block>` | Add a block type. Tab suggests allowed blocks you have yet to add |
-| `/chain remove <block>` | Remove a block type. Tab suggests blocks from your personal list |
+| `/chain add <block\|logs\|ores>` | Add a block type. Tab suggests allowed blocks you have yet to add |
+| `/chain remove <block\|logs\|ores>` | Remove a block type. Tab suggests blocks from your personal list |
 | `/chain edit` | Enter or exit selection mode. Right-click a block to toggle its type in your list |
+
+The `logs` group uses the vanilla logs tag. The `ores` group includes ores and ancient debris. Adding a group uses the current allowlist and saves individual block types. Removing a group clears every matching type from your personal list.
 
 ## Permissions
 
@@ -65,8 +75,15 @@ Run `/chain settings` to change your controls through chat buttons. With both sn
 | `allowed-blocks` | Common ores, logs, and stems | Block types the administrator allows players to add |
 | `max-blocks` | `64` | Maximum number of blocks per chain, including the first block |
 | `max-radius` | `16` | Maximum straight-line distance from the first block |
+| `cross-block-types` | `false` | Allow a chain to pass through different face-adjacent types that are both allowed and selected |
+| `player-defaults.enabled` | `false` | Initial setting for the master switch |
+| `player-defaults.require-sneak` | `true` | Require sneaking by default |
+| `player-defaults.sneak-swap` | `false` | Enable the sneak-and-swap shortcut by default |
+| `player-defaults.blocks` | `[]` | Initial player block list, limited to types in `allowed-blocks` |
 
-Restart the server after changing the configuration. The search only visits loaded chunks.
+Restart the server after changing the configuration. Player defaults apply to players who have not saved personal settings. The search only visits loaded chunks.
+
+At startup, ChainVein adds missing keys and removes obsolete keys using the bundled configuration template. Existing values for supported keys are preserved. When migration changes the file, the previous file is saved as `config.yml.bak`.
 
 ## Integrations
 

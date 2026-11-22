@@ -1,4 +1,6 @@
-# 只有列出的方块可加入个人列表。每次连锁只匹配起点的方块种类。
+# ChainVein
+# 修改后重启服务端。玩家主动保存的个人设置存放在 players 目录。
+# 只有白名单内的方块可参与连锁或加入个人列表。
 allowed-blocks:
   - coal_ore
   - deepslate_coal_ore
@@ -30,7 +32,19 @@ allowed-blocks:
   - crimson_stem
   - warped_stem
 
-# 总数包含玩家手动挖掘的起点方块。
+# 总数包含玩家手动挖掘的起点方块。设为 1 可关闭额外采集。
 max-blocks: 64
-# 从起点计算的最大直线距离（方块）。
+# 从起点计算的最大直线距离（方块）。设为 0 可关闭额外采集。
 max-radius: 16
+
+# 开启后，可连锁面相邻且同时在全服白名单和玩家个人列表中的不同种类方块。
+cross-block-types: false
+
+# 供尚未保存个人设置的玩家使用。
+player-defaults:
+  enabled: false
+  require-sneak: true
+  sneak-swap: false
+  # 初始方块列表中的方块也必须在 allowed-blocks 中。
+  # 示例写法为 [iron_ore, oak_log]。
+  blocks: []

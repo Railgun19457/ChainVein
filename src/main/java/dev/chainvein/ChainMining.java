@@ -28,13 +28,16 @@ final class ChainMining implements Listener {
     private final MiningBoundary boundary;
     private final int maxBlocks;
     private final long radiusSquared;
+    private final boolean crossBlockTypes;
     private final Set<UUID> active = new HashSet<>();
 
-    ChainMining(ChainVeinPlugin plugin, MiningBoundary boundary, int maxBlocks, int maxRadius) {
+    ChainMining(ChainVeinPlugin plugin, MiningBoundary boundary, int maxBlocks, int maxRadius,
+            boolean crossBlockTypes) {
         this.plugin = plugin;
         this.boundary = boundary;
         this.maxBlocks = maxBlocks;
         this.radiusSquared = (long) maxRadius * maxRadius;
+        this.crossBlockTypes = crossBlockTypes;
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -96,7 +99,7 @@ final class ChainMining implements Listener {
         @Override
         public void run() {
             try {
-                if (!canContinue() || (withinBoundary == null && !begin())) {
+                if (activeSettings() == null || (withinBoundary == null && !begin())) {
                     finish();
                     return;
                 }
@@ -112,12 +115,17 @@ final class ChainMining implements Listener {
                     }
 
                     Block block = world.getBlockAt(next.x(), next.y(), next.z());
-                    if (block.getType() != material || !withinBoundary.test(block)) {
+                    Material target = block.getType();
+                    if (target != material && (!crossBlockTypes || !plugin.allowedBlocks().contains(target))) {
                         continue;
                     }
-                    if (!canContinue()) {
+                    PlayerSettings settings = activeSettings();
+                    if (settings == null) {
                         finish();
                         return;
+                    }
+                    if (!settings.blocks().contains(target) || !withinBoundary.test(block)) {
+                        continue;
                     }
                     if (player.breakBlock(block)) {
                         broken++;
@@ -148,14 +156,14 @@ final class ChainMining implements Listener {
             return true;
         }
 
-        private boolean canContinue() {
+        private PlayerSettings activeSettings() {
             if (!player.isOnline() || player.isDead() || !player.getWorld().equals(world)
                     || player.getGameMode() != GameMode.SURVIVAL || !player.hasPermission(ChainVeinPlugin.USE_PERMISSION)
                     || player.getInventory().getHeldItemSlot() != slot || !tool.equals(toolSignature(player))) {
-                return false;
+                return null;
             }
             PlayerSettings settings = plugin.readSettings(player.getUniqueId());
-            return settings != null && settings.enabled() && settings.blocks().contains(material);
+            return settings != null && settings.enabled() && settings.blocks().contains(material) ? settings : null;
         }
 
         private boolean loaded(Position position) {

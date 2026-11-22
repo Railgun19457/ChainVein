@@ -23,12 +23,12 @@ record PlayerSettings(boolean enabled, boolean requireSneak, boolean sneakSwap, 
         return new PlayerSettings(enabled, requireSneak, value, blocks);
     }
 
-    PlayerSettings withBlock(Material material, boolean added) {
+    PlayerSettings withBlocks(Set<Material> materials, boolean added) {
         Set<Material> updated = new HashSet<>(blocks);
         if (added) {
-            updated.add(material);
+            updated.addAll(materials);
         } else {
-            updated.remove(material);
+            updated.removeAll(materials);
         }
         return new PlayerSettings(enabled, requireSneak, sneakSwap, updated);
     }

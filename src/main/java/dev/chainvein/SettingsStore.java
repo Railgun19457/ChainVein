@@ -1,10 +1,8 @@
 package dev.chainvein;
 
 import java.io.IOException;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -20,11 +18,13 @@ import org.bukkit.configuration.file.YamlConfiguration;
 final class SettingsStore {
     private final Path directory;
     private final Logger logger;
+    private final PlayerSettings defaults;
     private final ConcurrentMap<UUID, Optional<PlayerSettings>> cache = new ConcurrentHashMap<>();
 
-    SettingsStore(Path directory, Logger logger) {
+    SettingsStore(Path directory, Logger logger, PlayerSettings defaults) {
         this.directory = directory;
         this.logger = logger;
+        this.defaults = defaults;
     }
 
     PlayerSettings get(UUID playerId) {
@@ -34,7 +34,7 @@ final class SettingsStore {
     private PlayerSettings load(UUID playerId) {
         Path file = fileFor(playerId);
         if (Files.notExists(file)) {
-            return PlayerSettings.DEFAULT;
+            return defaults;
         }
 
         YamlConfiguration yaml = new YamlConfiguration();
@@ -61,7 +61,8 @@ final class SettingsStore {
     }
 
     void save(UUID playerId, PlayerSettings settings) throws IOException {
-        if (settings.equals(get(playerId))) {
+        Path file = fileFor(playerId);
+        if (settings.equals(get(playerId)) && Files.isRegularFile(file)) {
             return;
         }
 
@@ -71,20 +72,8 @@ final class SettingsStore {
         yaml.set("sneak-swap", settings.sneakSwap());
         yaml.set("blocks", settings.blocks().stream().map(ChainVeinPlugin::blockKey).sorted().toList());
 
-        Files.createDirectories(directory);
-        Path file = fileFor(playerId);
-        Path pending = Files.createTempFile(directory, playerId.toString(), ".tmp");
-        try {
-            Files.writeString(pending, yaml.saveToString());
-            try {
-                Files.move(pending, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (AtomicMoveNotSupportedException exception) {
-                Files.move(pending, file, StandardCopyOption.REPLACE_EXISTING);
-            }
-            cache.put(playerId, Optional.of(settings));
-        } finally {
-            Files.deleteIfExists(pending);
-        }
+        YamlFiles.writeAtomically(file, yaml);
+        cache.put(playerId, Optional.of(settings));
     }
 
     private Path fileFor(UUID playerId) {
